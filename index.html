@@ -667,8 +667,8 @@
 </div>
 
 <!-- Firebase SDK (compat 버전 - 별도 빌드 도구 없이 <script> 태그로 바로 사용) -->
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js" crossorigin="anonymous"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js" crossorigin="anonymous"></script>
 
 <script>
 (function(){
@@ -687,8 +687,15 @@
   // ↑↑↑ 여기까지 ↑↑↑
   // =====================================================================
 
-  firebase.initializeApp(firebaseConfig);
-  var db = firebase.firestore();
+  var db = null;
+  var firebaseReady = false;
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.firestore();
+    firebaseReady = true;
+  }catch(e){
+    console.error('Firebase 초기화 실패 - 곡 저장/불러오기 기능이 동작하지 않을 수 있어요.', e);
+  }
 
   // 관리자 비밀번호: 필요하면 아래 값을 원하는 문자열로 바꿔서 사용하세요.
   // 이 방식은 페이지 소스에 그대로 보이므로, 진짜 보안이 아니라
@@ -742,6 +749,10 @@
 
   // ---------- entries (Firestore에 실시간 저장 / 동기화) ----------
   function subscribeEntries(){
+    if(!firebaseReady){
+      console.error('Firebase가 초기화되지 않아 곡 목록을 불러올 수 없어요.');
+      return;
+    }
     db.collection('entries').onSnapshot(function(snapshot){
       state.entries = snapshot.docs.map(function(doc){
         var d = doc.data();
@@ -761,6 +772,10 @@
   }
 
   function addEntryToFirestore(entry){
+    if(!firebaseReady){
+      alert('곡을 추가하지 못했어요. Firebase 연결에 문제가 있어요.');
+      return Promise.resolve();
+    }
     return db.collection('entries').add(entry).catch(function(err){
       console.error('곡 추가 실패', err);
       alert('곡을 추가하지 못했어요. Firebase 설정을 확인해주세요.');
@@ -768,6 +783,10 @@
   }
 
   function deleteEntryFromFirestore(id){
+    if(!firebaseReady){
+      alert('삭제하지 못했어요. Firebase 연결에 문제가 있어요.');
+      return Promise.resolve();
+    }
     return db.collection('entries').doc(id).delete().catch(function(err){
       console.error('곡 삭제 실패', err);
     });
@@ -1269,15 +1288,41 @@
     });
   }
 
+  // iTunes 검색 API는 fetch(CORS)로 직접 호출하면 브라우저 보안 정책에
+  // 막히는 경우가 있어서, API가 공식 지원하는 JSONP 방식(<script> 태그로
+  // 불러오기)으로 요청해요. 이 방식은 CORS 제약을 받지 않아요.
+  var jsonpCounter = 0;
+  function jsonpRequest(url, onSuccess, onError){
+    var callbackName = 'onochuItunesCb' + (jsonpCounter++);
+    var script = document.createElement('script');
+    var timeoutId;
+    function cleanup(){
+      try{ delete window[callbackName]; }catch(e){ window[callbackName] = undefined; }
+      if(script.parentNode) script.parentNode.removeChild(script);
+      clearTimeout(timeoutId);
+    }
+    window[callbackName] = function(data){
+      cleanup();
+      onSuccess(data);
+    };
+    script.onerror = function(){
+      cleanup();
+      onError();
+    };
+    timeoutId = setTimeout(function(){
+      cleanup();
+      onError();
+    }, 8000);
+    script.src = url + (url.indexOf('?') > -1 ? '&' : '?') + 'callback=' + callbackName;
+    document.body.appendChild(script);
+  }
+
   function runSearch(query){
     state.searching = true;
     state.searchError = '';
     renderSearchResults();
     var url = 'https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&country=KR&media=music&entity=song&limit=8';
-    fetch(url).then(function(res){
-      if(!res.ok) throw new Error('네트워크 오류');
-      return res.json();
-    }).then(function(data){
+    jsonpRequest(url, function(data){
       state.searching = false;
       var results = (data.results || []).map(function(r){
         var art = r.artworkUrl100 ? r.artworkUrl100.replace('100x100bb', '300x300bb') : '';
@@ -1289,7 +1334,7 @@
       });
       state.searchResults = results;
       renderSearchResults();
-    }).catch(function(){
+    }, function(){
       state.searching = false;
       state.searchError = '검색에 실패했어요. 잠시 후 다시 시도해주세요.';
       renderSearchResults();
