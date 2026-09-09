@@ -433,13 +433,16 @@
     gap:8px;
     margin-top:2px;
   }
-  .btn-secondary, .btn-primary{
+  .btn-secondary, .btn-primary, .btn-danger{
     border-radius:8px;
     padding:8px 14px;
     font-size:13px;
     font-family:inherit;
     cursor:pointer;
     border:1px solid var(--line);
+    line-height:1.4;
+    -webkit-appearance:none;
+    appearance:none;
   }
   .btn-secondary{ background:transparent; color:var(--text-dim); }
   .btn-secondary:hover{ color:var(--text); }
@@ -456,6 +459,42 @@
     cursor:not-allowed;
   }
   .btn-primary:not(:disabled):hover{ filter:brightness(1.05); }
+  .btn-danger{
+    background:#B2504C;
+    border-color:#B2504C;
+    color:#2E0B0B;
+    font-weight:700;
+  }
+  .btn-danger:hover{ filter:brightness(1.08); }
+
+  /* ---------- Confirm modal ---------- */
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(8,9,20,0.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:60;
+  }
+  .modal-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+    width:280px;
+  }
+  .modal-title{
+    font-size:15px;
+    font-weight:700;
+    margin-bottom:10px;
+  }
+  .modal-body{
+    font-size:13.5px;
+    color:var(--text-dim);
+    margin-bottom:16px;
+    line-height:1.5;
+  }
 
   .onochu-error{
     font-size:12px;
@@ -597,6 +636,16 @@
         <div class="reco-view-title" id="reco-view-title"></div>
       </div>
       <div id="reco-view-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="confirm-modal" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-body" id="confirm-modal-body"></div>
+      <div class="add-form-actions">
+        <button class="btn-secondary" id="confirm-modal-cancel">취소</button>
+        <button class="btn-danger" id="confirm-modal-confirm">삭제</button>
+      </div>
     </div>
   </div>
 </div>
@@ -831,8 +880,9 @@
 
       listEl.querySelectorAll('.song-del').forEach(function(btn){
         btn.addEventListener('click', function(){
-          if(!window.confirm('이 추천곡을 삭제할까요?')) return;
-          deleteEntryFromFirestore(btn.getAttribute('data-id'));
+          showConfirm('이 추천곡을 삭제할까요?', function(){
+            deleteEntryFromFirestore(btn.getAttribute('data-id'));
+          });
         });
       });
     }
@@ -951,8 +1001,9 @@
 
       list.querySelectorAll('.song-del').forEach(function(btn){
         btn.addEventListener('click', function(){
-          if(!window.confirm('이 추천곡을 삭제할까요?')) return;
-          deleteEntryFromFirestore(btn.getAttribute('data-id'));
+          showConfirm('이 추천곡을 삭제할까요?', function(){
+            deleteEntryFromFirestore(btn.getAttribute('data-id'));
+          });
         });
       });
     } else if(!state.showAddForm) {
@@ -1214,6 +1265,26 @@
     resetAddForm();
     renderCalendar();
     renderDayPanel();
+  });
+
+  // ---------- confirm modal (자체 확인창) ----------
+  var confirmModal = document.getElementById('confirm-modal');
+  var confirmModalBody = document.getElementById('confirm-modal-body');
+  var confirmModalCallback = null;
+  function showConfirm(message, onConfirm){
+    confirmModalBody.textContent = message;
+    confirmModalCallback = onConfirm;
+    confirmModal.style.display = 'flex';
+  }
+  function closeConfirmModal(){
+    confirmModal.style.display = 'none';
+    confirmModalCallback = null;
+  }
+  document.getElementById('confirm-modal-cancel').addEventListener('click', closeConfirmModal);
+  document.getElementById('confirm-modal-confirm').addEventListener('click', function(){
+    var cb = confirmModalCallback;
+    closeConfirmModal();
+    if(cb) cb();
   });
 
   renderCalendar();
