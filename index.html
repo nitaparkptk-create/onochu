@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오노추 - 오늘의 노래 추천</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap');
+
+  :root{
+    --bg:#12142B;
+    --surface:#1B1E3D;
+    --surface-2:#242850;
+    --line:#33376A;
+    --accent:#F2B84B;
+    --accent-dim:#8A6A2A;
+    --mint:#8FE3CF;
+    --mint-dim:#2E4A44;
+    --text:#F5F3ED;
+    --text-dim:#9A9DC4;
+    --danger:#E36565;
+  }
+
+  *{box-sizing:border-box;}
+
+  html, body{ margin:0; padding:0; }
+
+  #onochu-root{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Sans KR', sans-serif;
+    min-height:100vh;
+    padding:32px 20px 60px;
+    display:flex;
+    justify-content:center;
+    position:relative;
+  }
+
+  .onochu-wrap{
+    width:100%;
+    max-width:920px;
+  }
+
+  /* ---------- Header ---------- */
+  .onochu-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:28px;
+    flex-wrap:wrap;
+  }
+  .onochu-title-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .onochu-logo-emoji{
+    font-size:28px;
+    line-height:1;
+    flex:none;
+  }
+  .onochu-title{
+    font-family:'Nanum Gothic', sans-serif;
+    font-weight:800;
+    font-size:28px;
+    letter-spacing:0.5px;
+    color:var(--text);
+  }
+  .onochu-subtitle{
+    margin-top:4px;
+    color:var(--text-dim);
+    font-size:14px;
+    line-height:1.5;
+  }
+  .onochu-header-right{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+  }
+  /* ---------- Menu ---------- */
+  .menu-btn-wrap{
+    position:relative;
+  }
+  .menu-btn{
+    background:var(--surface);
+    border:1px solid var(--line);
+    width:34px;
+    height:34px;
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+  }
+  .menu-btn:hover{ border-color:var(--accent); }
+  .menu-admin-dot{
+    position:absolute;
+    top:-2px;
+    right:-2px;
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:var(--accent);
+    border:1.5px solid var(--bg);
+  }
+  .menu-dropdown{
+    position:absolute;
+    top:42px;
+    right:0;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    min-width:172px;
+    padding:6px;
+    z-index:30;
+    box-shadow:0 10px 28px rgba(0,0,0,0.4);
+  }
+  .menu-dropdown button{
+    width:100%;
+    text-align:left;
+    background:transparent;
+    border:none;
+    color:var(--text);
+    padding:9px 10px;
+    border-radius:7px;
+    font-size:13px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .menu-dropdown button:hover{ background:var(--surface-2); }
+  .menu-divider{
+    height:1px;
+    background:var(--line);
+    margin:5px 3px;
+  }
+
+  /* ---------- Layout ---------- */
+  .onochu-grid{
+    display:grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap:20px;
+    align-items:start;
+  }
+  @media (max-width:720px){
+    .onochu-grid{ grid-template-columns: 1fr; }
+  }
+
+  .onochu-panel{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:18px;
+  }
+
+  /* ---------- Calendar ---------- */
+  .cal-nav{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:14px;
+  }
+  .cal-nav-title{
+    font-size:16px;
+    font-weight:600;
+  }
+  .cal-nav-btns{
+    display:flex;
+    gap:6px;
+  }
+  .cal-nav button{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    width:30px;
+    height:30px;
+    border-radius:8px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .cal-nav button:hover{ border-color:var(--accent); }
+  .cal-today-btn{
+    background:transparent;
+    border:1px solid var(--line);
+    color:var(--text-dim);
+    font-size:12px;
+    padding:0 10px;
+    border-radius:8px;
+    cursor:pointer;
+    height:30px;
+    white-space:nowrap;
+    flex:none;
+  }
+  .cal-today-btn:hover{ color:var(--text); border-color:var(--accent); }
+
+  .cal-weekdays{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    text-align:center;
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+  }
+  .cal-weekdays span{ padding:4px 0; }
+
+  .cal-grid{
+    display:grid;
+    grid-template-columns:repeat(7,1fr);
+    grid-auto-rows:64px;
+    gap:4px;
+  }
+
+  .cal-cell{
+    position:relative;
+    border-radius:10px;
+    padding:6px;
+    cursor:pointer;
+    border:1px solid transparent;
+    background:transparent;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+    transition:border-color .15s ease, background .15s ease;
+  }
+  .cal-cell:hover{ background:var(--surface-2); }
+  .cal-cell.is-pad{ cursor:default; }
+  .cal-cell.is-pad:hover{ background:transparent; }
+  .cal-cell.is-pad .cal-date{ color:#4A4E7A; }
+
+  .cal-cell.is-selected{
+    border-color:var(--accent);
+    background:rgba(242,184,75,0.08);
+  }
+
+  .cal-date{
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .cal-cell.is-today .cal-date{
+    color:var(--accent);
+    font-weight:700;
+  }
+
+  .cal-thumbs{
+    display:flex;
+    align-items:center;
+  }
+  .cal-thumb{
+    width:20px;
+    height:20px;
+    border-radius:50%;
+    object-fit:cover;
+    border:1.5px solid var(--surface);
+    margin-left:-7px;
+    background:var(--surface-2);
+  }
+  .cal-thumb:first-child{ margin-left:0; }
+  .cal-more{
+    font-size:10px;
+    color:var(--text-dim);
+    margin-left:4px;
+  }
+
+  /* ---------- Day panel ---------- */
+  .day-panel-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:12px;
+  }
+  .day-panel-date{
+    font-size:16px;
+    font-weight:600;
+  }
+  .day-panel-count{
+    font-size:12px;
+    color:var(--text-dim);
+  }
+
+  .song-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    margin-bottom:14px;
+  }
+  .song-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--surface-2);
+    border-radius:10px;
+    padding:8px;
+    position:relative;
+  }
+  .song-art{
+    width:46px;
+    height:46px;
+    border-radius:7px;
+    object-fit:cover;
+    background:var(--bg);
+    flex:none;
+  }
+  .song-meta{
+    min-width:0;
+    flex:1;
+  }
+  .song-toplabel{
+    font-size:12px;
+    font-weight:700;
+    margin-bottom:3px;
+  }
+  .song-toplabel.label-reco{ color:var(--mint); }
+  .song-toplabel.label-date{ color:var(--text-dim); }
+  .song-line{
+    font-size:13.5px;
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .song-del{
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    cursor:pointer;
+    font-size:15px;
+    padding:4px 6px;
+    flex:none;
+    border-radius:6px;
+  }
+  .song-del:hover{ color:var(--danger); background:rgba(227,101,101,0.12); }
+
+  .day-empty{
+    color:var(--text-dim);
+    font-size:13px;
+    line-height:1.6;
+    background:var(--surface-2);
+    border-radius:10px;
+    padding:18px 14px;
+    margin-bottom:14px;
+  }
+
+  .add-toggle-btn{
+    width:100%;
+    background:transparent;
+    border:1px dashed var(--line);
+    color:var(--text-dim);
+    border-radius:10px;
+    padding:10px;
+    cursor:pointer;
+    font-size:13px;
+    font-family:inherit;
+  }
+  .add-toggle-btn:hover{
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+
+  /* ---------- Add form ---------- */
+  .add-form{
+    background:var(--surface-2);
+    border-radius:10px;
+    padding:12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .add-form input[type="text"], .add-form input[type="date"], .add-form input[type="password"]{
+    width:100%;
+    background:var(--bg);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:8px;
+    padding:9px 10px;
+    font-size:13.5px;
+    font-family:inherit;
+    outline:none;
+  }
+  .add-form input:focus{ border-color:var(--accent); }
+  .add-form label{
+    font-size:11.5px;
+    color:var(--text-dim);
+    margin-bottom:-4px;
+  }
+
+  .search-results{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    max-height:220px;
+    overflow-y:auto;
+  }
+  .search-result-row{
+    display:flex;
+    align-items:center;
+    gap:9px;
+    padding:6px;
+    border-radius:8px;
+    cursor:pointer;
+  }
+  .search-result-row:hover{ background:var(--bg); }
+  .search-result-row img{
+    width:36px; height:36px; border-radius:6px; object-fit:cover; flex:none;
+    background:var(--surface);
+  }
+  .search-result-row .sr-title{ font-size:12.5px; font-weight:600; }
+  .search-result-row .sr-artist{ font-size:11.5px; color:var(--text-dim); }
+  .search-hint{
+    font-size:12px;
+    color:var(--text-dim);
+    padding:4px 2px;
+  }
+
+  .selected-song-card{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    background:var(--bg);
+    border-radius:8px;
+    padding:8px;
+  }
+  .selected-song-card img{
+    width:44px; height:44px; border-radius:6px; object-fit:cover; flex:none;
+  }
+  .selected-song-card .ssc-meta{ flex:1; min-width:0; }
+  .selected-song-card .ssc-title{ font-size:13px; font-weight:600; }
+  .selected-song-card .ssc-artist{ font-size:12px; color:var(--text-dim); }
+  .ssc-change{
+    background:transparent;
+    border:none;
+    color:var(--text-dim);
+    font-size:11.5px;
+    text-decoration:underline;
+    cursor:pointer;
+    flex:none;
+    font-family:inherit;
+  }
+  .ssc-change:hover{ color:var(--accent); }
+
+  .add-form-actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:8px;
+    margin-top:2px;
+  }
+  .btn-secondary, .btn-primary{
+    border-radius:8px;
+    padding:8px 14px;
+    font-size:13px;
+    font-family:inherit;
+    cursor:pointer;
+    border:1px solid var(--line);
+  }
+  .btn-secondary{ background:transparent; color:var(--text-dim); }
+  .btn-secondary:hover{ color:var(--text); }
+  .btn-primary{
+    background:var(--accent);
+    border-color:var(--accent);
+    color:#241A05;
+    font-weight:700;
+  }
+  .btn-primary:disabled{
+    background:var(--accent-dim);
+    border-color:var(--accent-dim);
+    color:#8A7A50;
+    cursor:not-allowed;
+  }
+  .btn-primary:not(:disabled):hover{ filter:brightness(1.05); }
+
+  .onochu-error{
+    font-size:12px;
+    color:var(--danger);
+    padding:4px 2px;
+  }
+  .onochu-loading{
+    font-size:12px;
+    color:var(--text-dim);
+    padding:4px 2px;
+  }
+
+  /* ---------- Recommender view ---------- */
+  .reco-view-head{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .reco-back-btn{
+    background:var(--surface-2);
+    border:1px solid var(--line);
+    color:var(--text);
+    border-radius:8px;
+    padding:6px 10px;
+    font-size:12px;
+    cursor:pointer;
+    font-family:inherit;
+    flex:none;
+  }
+  .reco-back-btn:hover{ border-color:var(--accent); }
+  .reco-view-title{
+    font-size:16px;
+    font-weight:600;
+  }
+  .reco-person-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:12px;
+    background:var(--surface-2);
+    border-radius:10px;
+    cursor:pointer;
+    margin-bottom:8px;
+    border:1px solid transparent;
+  }
+  .reco-person-row:hover{ border-color:var(--accent); }
+  .reco-person-name{ font-size:14px; font-weight:600; }
+  .reco-person-count{ font-size:12px; color:var(--text-dim); }
+  .reco-empty{
+    color:var(--text-dim);
+    font-size:13px;
+    background:var(--surface-2);
+    border-radius:10px;
+    padding:18px 14px;
+  }
+
+  /* ---------- Admin modal ---------- */
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(8,9,20,0.6);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:60;
+  }
+  .modal-card{
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px;
+    width:280px;
+  }
+  .modal-title{
+    font-size:15px;
+    font-weight:700;
+    margin-bottom:12px;
+  }
+  .modal-card .add-form{
+    background:transparent;
+    padding:0;
+  }
+  .pw-field-wrap{
+    position:relative;
+  }
+  .pw-field-wrap input{
+    padding-right:38px !important;
+  }
+  .pw-toggle-btn{
+    position:absolute;
+    right:4px;
+    top:50%;
+    transform:translateY(-50%);
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    width:30px;
+    height:30px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:6px;
+  }
+  .pw-toggle-btn:hover{ background:var(--surface-2); }
+</style>
+</head>
+<body>
+
+<div id="onochu-root">
+  <div class="onochu-wrap">
+    <div class="onochu-header">
+      <div>
+        <div class="onochu-title-row">
+          <span class="onochu-logo-emoji" aria-hidden="true">🎧</span>
+          <span class="onochu-title">오노추</span>
+        </div>
+        <div class="onochu-subtitle">건물 사이에 피어난 오노추</div>
+      </div>
+      <div class="onochu-header-right">
+        <div class="menu-btn-wrap">
+          <button class="menu-btn" id="menu-btn" aria-label="메뉴">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4H14M2 8H14M2 12H14" stroke="#F5F3ED" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span class="menu-admin-dot" id="menu-admin-dot" style="display:none;"></span>
+          </button>
+          <div class="menu-dropdown" id="menu-dropdown" style="display:none;">
+            <button id="menu-item-reco">추천자별로 보기</button>
+            <div class="menu-divider"></div>
+            <button id="menu-item-admin">관리자 로그인</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="onochu-grid" id="calendar-view">
+      <div class="onochu-panel">
+        <div class="cal-nav">
+          <div class="cal-nav-title" id="cal-nav-title"></div>
+          <div class="cal-nav-btns">
+            <button id="cal-today-btn" class="cal-today-btn">오늘</button>
+            <button id="cal-prev-btn" aria-label="이전 달">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M9 2L4 7L9 12" stroke="#F5F3ED" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button id="cal-next-btn" aria-label="다음 달">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M5 2L10 7L5 12" stroke="#F5F3ED" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        <div class="cal-weekdays">
+          <span>일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span>토</span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+      </div>
+
+      <div class="onochu-panel">
+        <div class="day-panel-head">
+          <div class="day-panel-date" id="day-panel-date"></div>
+          <div class="day-panel-count" id="day-panel-count"></div>
+        </div>
+        <div id="day-panel-body"></div>
+      </div>
+    </div>
+
+    <div class="onochu-panel" id="reco-view" style="display:none;">
+      <div class="reco-view-head">
+        <button class="reco-back-btn" id="reco-back-btn">← 뒤로</button>
+        <div class="reco-view-title" id="reco-view-title"></div>
+      </div>
+      <div id="reco-view-body"></div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="admin-modal" style="display:none;">
+    <div class="modal-card">
+      <div class="modal-title" id="admin-modal-title">관리자 로그인</div>
+      <div class="add-form">
+        <label for="admin-pw-input">비밀번호</label>
+        <div class="pw-field-wrap">
+          <input type="password" id="admin-pw-input" placeholder="비밀번호 입력" />
+          <button type="button" class="pw-toggle-btn" id="pw-toggle-btn" aria-label="비밀번호 표시">
+            <svg id="pw-eye-icon" width="18" height="18" viewBox="0 0 18 18" fill="none">
+              <path d="M1.5 9C1.5 9 4 3.5 9 3.5C14 3.5 16.5 9 16.5 9C16.5 9 14 14.5 9 14.5C4 14.5 1.5 9 1.5 9Z" stroke="#9A9DC4" stroke-width="1.4" stroke-linejoin="round"/>
+              <circle cx="9" cy="9" r="2.3" stroke="#9A9DC4" stroke-width="1.4"/>
+              <line id="pw-eye-slash" x1="2.5" y1="2.5" x2="15.5" y2="15.5" stroke="#9A9DC4" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="onochu-error" id="admin-modal-error" style="display:none;">비밀번호가 일치하지 않습니다</div>
+        <div class="add-form-actions">
+          <button class="btn-secondary" id="admin-modal-cancel">취소</button>
+          <button class="btn-primary" id="admin-modal-confirm">로그인</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Firebase SDK (compat 버전 - 별도 빌드 도구 없이 <script> 태그로 바로 사용) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+<script>
+(function(){
+
+  // =====================================================================
+  // ↓↓↓ Firebase 콘솔에서 복사한 firebaseConfig 값을 아래에 붙여넣으세요 ↓↓↓
+  // (Firebase 콘솔 > 프로젝트 설정 > 내 앱 > 웹 앱 등록 시 나오는 값이에요)
+  var firebaseConfig = {
+    apiKey: "AIzaSyBHD2lzildIf_gFWKBApH25wqmjUdsnrKU",
+    authDomain: "onochu-84728.firebaseapp.com",
+    projectId: "onochu-84728",
+    storageBucket: "onochu-84728.firebasestorage.app",
+    messagingSenderId: "1086459712754",
+    appId: "1:1086459712754:web:6464906b5e8139c4fdec6b"
+  };
+  // ↑↑↑ 여기까지 ↑↑↑
+  // =====================================================================
+
+  firebase.initializeApp(firebaseConfig);
+  var db = firebase.firestore();
+
+  // 관리자 비밀번호: 필요하면 아래 값을 원하는 문자열로 바꿔서 사용하세요.
+  // 이 방식은 페이지 소스에 그대로 보이므로, 진짜 보안이 아니라
+  // "아무나 실수로 곡을 추가/삭제하지 못하게" 막는 정도의 가벼운 장치입니다.
+  var ADMIN_PASSWORD = 'onochu2026';
+  var ADMIN_KEY = 'onochu-admin';
+
+  var state = {
+    entries: [],
+    currentMonth: startOfMonth(new Date()),
+    selectedDate: fmtDate(new Date()),
+    isAdmin: getAdminFlag(),
+    showAddForm: false,
+    searchQuery: '',
+    searchResults: [],
+    searching: false,
+    searchError: '',
+    selectedSong: null,
+    addDate: fmtDate(new Date()),
+    view: 'calendar',        // 'calendar' | 'reco-list' | 'reco-detail'
+    selectedRecommender: null,
+    menuOpen: false,
+    loaded: false
+  };
+
+  var searchDebounce = null;
+
+  function pad2(n){ return n < 10 ? '0'+n : ''+n; }
+  function fmtDate(d){ return d.getFullYear()+'-'+pad2(d.getMonth()+1)+'-'+pad2(d.getDate()); }
+  function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
+  function todayStr(){ return fmtDate(new Date()); }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, function(c){
+      return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];
+    });
+  }
+
+  function shortDateLabel(dateStr){
+    var p = dateStr.split('-').map(Number);
+    return p[1]+'월 '+p[2]+'일';
+  }
+
+  // ---------- admin flag (기기별 저장, 브라우저 localStorage 사용) ----------
+  function getAdminFlag(){
+    try{ return localStorage.getItem(ADMIN_KEY) === 'true'; }catch(e){ return false; }
+  }
+  function saveAdminFlag(flag){
+    try{ localStorage.setItem(ADMIN_KEY, flag ? 'true' : 'false'); }catch(e){}
+  }
+
+  // ---------- entries (Firestore에 실시간 저장 / 동기화) ----------
+  function subscribeEntries(){
+    db.collection('entries').onSnapshot(function(snapshot){
+      state.entries = snapshot.docs.map(function(doc){
+        var d = doc.data();
+        d.id = doc.id;
+        return d;
+      });
+      state.loaded = true;
+      renderCalendar();
+      if(state.view === 'calendar'){
+        renderDayPanel();
+      } else {
+        renderRecoView();
+      }
+    }, function(err){
+      console.error('곡 목록을 불러오지 못했어요', err);
+    });
+  }
+
+  function addEntryToFirestore(entry){
+    return db.collection('entries').add(entry).catch(function(err){
+      console.error('곡 추가 실패', err);
+      alert('곡을 추가하지 못했어요. Firebase 설정을 확인해주세요.');
+    });
+  }
+
+  function deleteEntryFromFirestore(id){
+    return db.collection('entries').doc(id).delete().catch(function(err){
+      console.error('곡 삭제 실패', err);
+    });
+  }
+
+  // ---------- menu ----------
+  function updateAdminDot(){
+    document.getElementById('menu-admin-dot').style.display = state.isAdmin ? 'block' : 'none';
+    document.getElementById('menu-item-admin').textContent = state.isAdmin ? '로그아웃' : '관리자 로그인';
+  }
+
+  var menuBtn = document.getElementById('menu-btn');
+  var menuDropdown = document.getElementById('menu-dropdown');
+  menuBtn.addEventListener('click', function(e){
+    e.stopPropagation();
+    state.menuOpen = !state.menuOpen;
+    menuDropdown.style.display = state.menuOpen ? 'block' : 'none';
+  });
+  document.addEventListener('click', function(){
+    if(state.menuOpen){
+      state.menuOpen = false;
+      menuDropdown.style.display = 'none';
+    }
+  });
+
+  document.getElementById('menu-item-reco').addEventListener('click', function(e){
+    e.stopPropagation();
+    state.menuOpen = false;
+    menuDropdown.style.display = 'none';
+    goToRecoList();
+  });
+
+  document.getElementById('menu-item-admin').addEventListener('click', function(e){
+    e.stopPropagation();
+    state.menuOpen = false;
+    menuDropdown.style.display = 'none';
+    if(state.isAdmin){
+      state.isAdmin = false;
+      saveAdminFlag(false);
+      updateAdminDot();
+      renderDayPanel();
+      if(state.view === 'reco-detail' || state.view === 'reco-list') renderRecoView();
+    } else {
+      openAdminModal();
+    }
+  });
+
+  // ---------- admin modal ----------
+  var adminModal = document.getElementById('admin-modal');
+  var adminPwInput = document.getElementById('admin-pw-input');
+  var adminModalError = document.getElementById('admin-modal-error');
+
+  function openAdminModal(){
+    adminPwInput.value = '';
+    adminPwInput.type = 'password';
+    pwVisible = false;
+    if(pwEyeSlash) pwEyeSlash.style.display = 'block';
+    adminModalError.style.display = 'none';
+    adminModal.style.display = 'flex';
+    setTimeout(function(){ adminPwInput.focus(); }, 0);
+  }
+  function closeAdminModal(){
+    adminModal.style.display = 'none';
+  }
+  document.getElementById('admin-modal-cancel').addEventListener('click', closeAdminModal);
+  document.getElementById('admin-modal-confirm').addEventListener('click', tryAdminLogin);
+  adminPwInput.addEventListener('keydown', function(e){
+    if(e.key === 'Enter') tryAdminLogin();
+  });
+  function tryAdminLogin(){
+    if(adminPwInput.value === ADMIN_PASSWORD){
+      state.isAdmin = true;
+      saveAdminFlag(true);
+      updateAdminDot();
+      closeAdminModal();
+      renderDayPanel();
+      if(state.view === 'reco-detail' || state.view === 'reco-list') renderRecoView();
+    } else {
+      adminModalError.style.display = 'block';
+    }
+  }
+
+  // ---------- view switching ----------
+  function showCalendarView(){
+    state.view = 'calendar';
+    document.getElementById('calendar-view').style.display = 'grid';
+    document.getElementById('reco-view').style.display = 'none';
+  }
+  function goToRecoList(){
+    state.view = 'reco-list';
+    state.selectedRecommender = null;
+    document.getElementById('calendar-view').style.display = 'none';
+    document.getElementById('reco-view').style.display = 'block';
+    renderRecoView();
+  }
+  function goToRecoDetail(name){
+    state.view = 'reco-detail';
+    state.selectedRecommender = name;
+    renderRecoView();
+  }
+
+  document.getElementById('reco-back-btn').addEventListener('click', function(){
+    if(state.view === 'reco-detail'){
+      goToRecoList();
+    } else {
+      showCalendarView();
+    }
+  });
+
+  function renderRecoView(){
+    var title = document.getElementById('reco-view-title');
+    var body = document.getElementById('reco-view-body');
+    body.innerHTML = '';
+
+    if(state.view === 'reco-list'){
+      title.textContent = '추천자별로 보기';
+      var names = {};
+      state.entries.forEach(function(e){
+        names[e.recommender] = (names[e.recommender] || 0) + 1;
+      });
+      var nameList = Object.keys(names).sort(function(a,b){ return names[b]-names[a]; });
+      if(nameList.length === 0){
+        var empty = document.createElement('div');
+        empty.className = 'reco-empty';
+        empty.textContent = '아직 추천된 곡이 없어요.';
+        body.appendChild(empty);
+        return;
+      }
+      nameList.forEach(function(name){
+        var row = document.createElement('div');
+        row.className = 'reco-person-row';
+        row.innerHTML =
+          '<span class="reco-person-name">'+escapeHtml(name)+'</span>' +
+          '<span class="reco-person-count">'+names[name]+'곡</span>';
+        row.addEventListener('click', function(){ goToRecoDetail(name); });
+        body.appendChild(row);
+      });
+    } else if(state.view === 'reco-detail'){
+      var name2 = state.selectedRecommender;
+      title.textContent = name2 + '님이 추천한 곡';
+      var list = state.entries
+        .filter(function(e){ return e.recommender === name2; })
+        .sort(function(a,b){ return a.date < b.date ? 1 : -1; });
+
+      if(list.length === 0){
+        var empty2 = document.createElement('div');
+        empty2.className = 'reco-empty';
+        empty2.textContent = '추천한 곡이 없어요.';
+        body.appendChild(empty2);
+        return;
+      }
+
+      var listEl = document.createElement('div');
+      listEl.className = 'song-list';
+      list.forEach(function(e){
+        var row = document.createElement('div');
+        row.className = 'song-row';
+        row.innerHTML =
+          '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
+          '<div class="song-meta">' +
+            '<div class="song-toplabel label-date">'+shortDateLabel(e.date)+'</div>' +
+            '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+          '</div>' +
+          (state.isAdmin ? '<button class="song-del" title="삭제" data-id="'+e.id+'">&times;</button>' : '');
+        listEl.appendChild(row);
+      });
+      body.appendChild(listEl);
+
+      listEl.querySelectorAll('.song-del').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          deleteEntryFromFirestore(btn.getAttribute('data-id'));
+        });
+      });
+    }
+  }
+
+  // ---------- calendar rendering ----------
+  var MONTH_LABEL = function(d){ return d.getFullYear()+'년 '+(d.getMonth()+1)+'월'; };
+
+  function entriesByDate(dateStr){
+    return state.entries.filter(function(e){ return e.date === dateStr; });
+  }
+
+  function renderCalendar(){
+    document.getElementById('cal-nav-title').textContent = MONTH_LABEL(state.currentMonth);
+
+    var year = state.currentMonth.getFullYear();
+    var month = state.currentMonth.getMonth();
+    var firstWeekday = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month+1, 0).getDate();
+    var daysInPrevMonth = new Date(year, month, 0).getDate();
+
+    var cells = [];
+    for(var i=0;i<firstWeekday;i++){
+      var d = daysInPrevMonth - firstWeekday + 1 + i;
+      cells.push({ day:d, pad:true, dateStr:null });
+    }
+    for(var day=1; day<=daysInMonth; day++){
+      var ds = year+'-'+pad2(month+1)+'-'+pad2(day);
+      cells.push({ day:day, pad:false, dateStr:ds });
+    }
+    var remainder = cells.length % 7;
+    if(remainder !== 0){
+      var nextDay = 1;
+      var toAdd = 7 - remainder;
+      for(var j=0;j<toAdd;j++){
+        cells.push({ day:nextDay, pad:true, dateStr:null });
+        nextDay++;
+      }
+    }
+
+    var grid = document.getElementById('cal-grid');
+    grid.innerHTML = '';
+    var tStr = todayStr();
+
+    cells.forEach(function(cell){
+      var el = document.createElement('div');
+      el.className = 'cal-cell' + (cell.pad ? ' is-pad' : '');
+      if(!cell.pad){
+        if(cell.dateStr === tStr) el.className += ' is-today';
+        if(cell.dateStr === state.selectedDate) el.className += ' is-selected';
+      }
+
+      var dateLine = document.createElement('div');
+      dateLine.className = 'cal-date';
+      dateLine.textContent = cell.day;
+      el.appendChild(dateLine);
+
+      if(!cell.pad){
+        var dayEntries = entriesByDate(cell.dateStr);
+        if(dayEntries.length > 0){
+          var thumbs = document.createElement('div');
+          thumbs.className = 'cal-thumbs';
+          var shown = dayEntries.slice(0,3);
+          shown.forEach(function(e){
+            var img = document.createElement('img');
+            img.className = 'cal-thumb';
+            img.src = e.artwork || '';
+            img.alt = '';
+            thumbs.appendChild(img);
+          });
+          if(dayEntries.length > 3){
+            var more = document.createElement('span');
+            more.className = 'cal-more';
+            more.textContent = '+'+(dayEntries.length-3);
+            thumbs.appendChild(more);
+          }
+          el.appendChild(thumbs);
+        }
+
+        el.addEventListener('click', function(dateStr){
+          return function(){
+            state.selectedDate = dateStr;
+            state.showAddForm = false;
+            resetAddForm();
+            renderCalendar();
+            renderDayPanel();
+          };
+        }(cell.dateStr));
+      }
+
+      grid.appendChild(el);
+    });
+  }
+
+  // ---------- day panel rendering ----------
+  function formatPanelDate(dateStr){
+    var parts = dateStr.split('-').map(Number);
+    var d = new Date(parts[0], parts[1]-1, parts[2]);
+    var weekdays = ['일','월','화','수','목','금','토'];
+    return (parts[1])+'월 '+parts[2]+'일 ('+weekdays[d.getDay()]+')';
+  }
+
+  function renderDayPanel(){
+    document.getElementById('day-panel-date').textContent = formatPanelDate(state.selectedDate);
+    var dayEntries = entriesByDate(state.selectedDate);
+    document.getElementById('day-panel-count').textContent = dayEntries.length > 0 ? dayEntries.length+'곡' : '';
+
+    var body = document.getElementById('day-panel-body');
+    body.innerHTML = '';
+
+    if(dayEntries.length > 0){
+      var list = document.createElement('div');
+      list.className = 'song-list';
+      dayEntries.forEach(function(e){
+        var row = document.createElement('div');
+        row.className = 'song-row';
+        row.innerHTML =
+          '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
+          '<div class="song-meta">' +
+            '<div class="song-toplabel label-reco">'+escapeHtml(e.recommender)+' 추천</div>' +
+            '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+          '</div>' +
+          (state.isAdmin ? '<button class="song-del" title="삭제" data-id="'+e.id+'">&times;</button>' : '');
+        list.appendChild(row);
+      });
+      body.appendChild(list);
+
+      list.querySelectorAll('.song-del').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          deleteEntryFromFirestore(btn.getAttribute('data-id'));
+        });
+      });
+    } else if(!state.showAddForm) {
+      var empty = document.createElement('div');
+      empty.className = 'day-empty';
+      empty.textContent = '아직 이 날 추천된 곡이 없어요.';
+      body.appendChild(empty);
+    }
+
+    if(!state.isAdmin){
+      return;
+    }
+
+    if(state.showAddForm){
+      body.appendChild(buildAddForm());
+    } else {
+      var toggle = document.createElement('button');
+      toggle.className = 'add-toggle-btn';
+      toggle.textContent = '+ 곡 추가하기';
+      toggle.addEventListener('click', function(){
+        state.showAddForm = true;
+        state.addDate = state.selectedDate;
+        renderDayPanel();
+        var input = document.getElementById('song-search-input');
+        if(input) input.focus();
+      });
+      body.appendChild(toggle);
+    }
+  }
+
+  function resetAddForm(){
+    state.searchQuery = '';
+    state.searchResults = [];
+    state.searching = false;
+    state.searchError = '';
+    state.selectedSong = null;
+  }
+
+  function buildAddForm(){
+    var wrap = document.createElement('div');
+    wrap.className = 'add-form';
+
+    if(!state.selectedSong){
+      var searchLabel = document.createElement('label');
+      searchLabel.textContent = '곡 검색 (제목 또는 아티스트)';
+      wrap.appendChild(searchLabel);
+
+      var input = document.createElement('input');
+      input.type = 'text';
+      input.id = 'song-search-input';
+      input.placeholder = '예: 아이유 밤편지';
+      input.value = state.searchQuery;
+      wrap.appendChild(input);
+
+      var resultsBox = document.createElement('div');
+      resultsBox.className = 'search-results';
+      resultsBox.id = 'song-search-results';
+      wrap.appendChild(resultsBox);
+
+      input.addEventListener('input', function(){
+        state.searchQuery = input.value;
+        if(searchDebounce) clearTimeout(searchDebounce);
+        var q = input.value.trim();
+        if(q.length < 2){
+          state.searchResults = [];
+          state.searchError = '';
+          renderSearchResults();
+          return;
+        }
+        searchDebounce = setTimeout(function(){ runSearch(q); }, 400);
+      });
+
+      renderSearchResultsInto(resultsBox);
+    } else {
+      var card = document.createElement('div');
+      card.className = 'selected-song-card';
+      card.innerHTML =
+        '<img src="'+escapeHtml(state.selectedSong.artwork)+'" alt="" />' +
+        '<div class="ssc-meta">' +
+          '<div class="ssc-title">'+escapeHtml(state.selectedSong.title)+'</div>' +
+          '<div class="ssc-artist">'+escapeHtml(state.selectedSong.artist)+'</div>' +
+        '</div>' +
+        '<button class="ssc-change" id="ssc-change-btn">다른 곡</button>';
+      wrap.appendChild(card);
+
+      var dateLabel = document.createElement('label');
+      dateLabel.textContent = '추천 날짜';
+      wrap.appendChild(dateLabel);
+      var dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.value = state.addDate;
+      dateInput.addEventListener('change', function(){ state.addDate = dateInput.value; });
+      wrap.appendChild(dateInput);
+
+      var nameLabel = document.createElement('label');
+      nameLabel.textContent = '추천한 사람';
+      wrap.appendChild(nameLabel);
+      var nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.id = 'recommender-input';
+      nameInput.maxLength = 12;
+      nameInput.placeholder = '이름';
+      wrap.appendChild(nameInput);
+
+      var actions = document.createElement('div');
+      actions.className = 'add-form-actions';
+      var cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn-secondary';
+      cancelBtn.textContent = '취소';
+      cancelBtn.addEventListener('click', function(){
+        state.showAddForm = false;
+        resetAddForm();
+        renderDayPanel();
+      });
+      var confirmBtn = document.createElement('button');
+      confirmBtn.className = 'btn-primary';
+      confirmBtn.textContent = '추가';
+      confirmBtn.id = 'confirm-add-btn';
+      confirmBtn.disabled = !(nameInput.value && nameInput.value.trim());
+      confirmBtn.addEventListener('click', function(){
+        var recommender = nameInput.value.trim();
+        if(!recommender) return;
+        var entry = {
+          date: state.addDate,
+          title: state.selectedSong.title,
+          artist: state.selectedSong.artist,
+          artwork: state.selectedSong.artwork,
+          recommender: recommender
+        };
+        addEntryToFirestore(entry);
+        state.selectedDate = entry.date;
+        state.showAddForm = false;
+        resetAddForm();
+        renderCalendar();
+        renderDayPanel();
+      });
+      nameInput.addEventListener('input', function(){
+        confirmBtn.disabled = !(nameInput.value && nameInput.value.trim());
+      });
+      actions.appendChild(cancelBtn);
+      actions.appendChild(confirmBtn);
+      wrap.appendChild(actions);
+
+      setTimeout(function(){
+        var chBtn = document.getElementById('ssc-change-btn');
+        if(chBtn){
+          chBtn.addEventListener('click', function(){
+            state.selectedSong = null;
+            renderDayPanel();
+          });
+        }
+      }, 0);
+    }
+
+    return wrap;
+  }
+
+  function renderSearchResults(){
+    var box = document.getElementById('song-search-results');
+    if(box) renderSearchResultsInto(box);
+  }
+
+  function renderSearchResultsInto(box){
+    box.innerHTML = '';
+    if(state.searching){
+      var l = document.createElement('div');
+      l.className = 'onochu-loading';
+      l.textContent = '검색 중...';
+      box.appendChild(l);
+      return;
+    }
+    if(state.searchError){
+      var err = document.createElement('div');
+      err.className = 'onochu-error';
+      err.textContent = state.searchError;
+      box.appendChild(err);
+      return;
+    }
+    if(state.searchQuery.trim().length >= 2 && state.searchResults.length === 0){
+      var hint = document.createElement('div');
+      hint.className = 'search-hint';
+      hint.textContent = '검색 결과가 없어요.';
+      box.appendChild(hint);
+      return;
+    }
+    state.searchResults.forEach(function(song){
+      var row = document.createElement('div');
+      row.className = 'search-result-row';
+      row.innerHTML =
+        '<img src="'+escapeHtml(song.artwork)+'" alt="" />' +
+        '<div><div class="sr-title">'+escapeHtml(song.title)+'</div>' +
+        '<div class="sr-artist">'+escapeHtml(song.artist)+'</div></div>';
+      row.addEventListener('click', function(){
+        state.selectedSong = song;
+        renderDayPanel();
+      });
+      box.appendChild(row);
+    });
+  }
+
+  function runSearch(query){
+    state.searching = true;
+    state.searchError = '';
+    renderSearchResults();
+    var url = 'https://itunes.apple.com/search?term='+encodeURIComponent(query)+'&country=KR&media=music&entity=song&limit=8';
+    fetch(url).then(function(res){
+      if(!res.ok) throw new Error('네트워크 오류');
+      return res.json();
+    }).then(function(data){
+      state.searching = false;
+      var results = (data.results || []).map(function(r){
+        var art = r.artworkUrl100 ? r.artworkUrl100.replace('100x100bb', '300x300bb') : '';
+        return {
+          title: r.trackName || '',
+          artist: r.artistName || '',
+          artwork: art
+        };
+      });
+      state.searchResults = results;
+      renderSearchResults();
+    }).catch(function(){
+      state.searching = false;
+      state.searchError = '검색에 실패했어요. 잠시 후 다시 시도해주세요.';
+      renderSearchResults();
+    });
+  }
+
+  // ---------- nav events ----------
+  document.getElementById('cal-prev-btn').addEventListener('click', function(){
+    state.currentMonth = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth()-1, 1);
+    renderCalendar();
+  });
+  document.getElementById('cal-next-btn').addEventListener('click', function(){
+    state.currentMonth = new Date(state.currentMonth.getFullYear(), state.currentMonth.getMonth()+1, 1);
+    renderCalendar();
+  });
+  document.getElementById('cal-today-btn').addEventListener('click', function(){
+    var now = new Date();
+    state.currentMonth = startOfMonth(now);
+    state.selectedDate = fmtDate(now);
+    state.showAddForm = false;
+    resetAddForm();
+    renderCalendar();
+    renderDayPanel();
+  });
+
+  // ---------- password show/hide toggle ----------
+  var pwToggleBtn = document.getElementById('pw-toggle-btn');
+  var pwEyeSlash = document.getElementById('pw-eye-slash');
+  var pwVisible = false;
+  pwToggleBtn.addEventListener('click', function(){
+    pwVisible = !pwVisible;
+    adminPwInput.type = pwVisible ? 'text' : 'password';
+    pwEyeSlash.style.display = pwVisible ? 'none' : 'block';
+    pwToggleBtn.setAttribute('aria-label', pwVisible ? '비밀번호 숨기기' : '비밀번호 표시');
+  });
+  adminPwInput.addEventListener('input', function(){
+    adminModalError.style.display = 'none';
+  });
+
+  updateAdminDot();
+  renderCalendar();
+  renderDayPanel();
+  subscribeEntries();
+})();
+</script>
+
+</body>
+</html>
