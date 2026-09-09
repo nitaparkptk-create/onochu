@@ -282,7 +282,7 @@
     height:46px;
     border-radius:7px;
     object-fit:contain;
-    background:#ffffff;
+    background:var(--surface-2);
     flex:none;
   }
   .song-meta{
@@ -366,6 +366,29 @@
     outline:none;
   }
   .add-form input:focus{ border-color:var(--accent); }
+  .search-input-wrap{
+    position:relative;
+  }
+  .search-input-wrap input{
+    padding-right:36px !important;
+  }
+  .search-clear-btn{
+    position:absolute;
+    right:10px;
+    top:50%;
+    transform:translateY(-50%);
+    background:transparent;
+    border:none;
+    cursor:pointer;
+    width:20px;
+    height:20px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50%;
+  }
+  .search-clear-btn svg{ width:11px; height:11px; }
+  .search-clear-btn:hover{ background:var(--surface-2); }
   .add-form label{
     font-size:11.5px;
     color:var(--text-dim);
@@ -390,7 +413,7 @@
   .search-result-row:hover{ background:var(--bg); }
   .search-result-row img{
     width:36px; height:36px; border-radius:6px; object-fit:contain; flex:none;
-    background:#ffffff;
+    background:var(--surface-2);
   }
   .search-result-row .sr-title{ font-size:12.5px; font-weight:600; }
   .search-result-row .sr-artist{ font-size:11.5px; color:var(--text-dim); }
@@ -410,7 +433,7 @@
   }
   .selected-song-card img{
     width:44px; height:44px; border-radius:6px; object-fit:contain; flex:none;
-    background:#ffffff;
+    background:var(--bg);
   }
   .selected-song-card .ssc-meta{ flex:1; min-width:0; }
   .selected-song-card .ssc-title{ font-size:13px; font-weight:600; }
@@ -440,7 +463,8 @@
     font-family:inherit;
     cursor:pointer;
     border:1px solid var(--line);
-    line-height:1.4;
+    line-height:1.9;
+    overflow:visible;
     -webkit-appearance:none;
     appearance:none;
   }
@@ -895,6 +919,28 @@
     return state.entries.filter(function(e){ return e.date === dateStr; });
   }
 
+  // 같은 추천자의 곡은 서로 붙어서 표시하되, 그 묶음의 위치는 그 사람이
+  // 처음 추천한 시점(가장 먼저 추가한 곡) 순서를 따르도록 정렬해요.
+  function groupByRecommenderKeepingOrder(entries){
+    var sorted = entries.slice().sort(function(a, b){
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
+    var order = [];
+    var groups = {};
+    sorted.forEach(function(e){
+      if(!groups[e.recommender]){
+        groups[e.recommender] = [];
+        order.push(e.recommender);
+      }
+      groups[e.recommender].push(e);
+    });
+    var result = [];
+    order.forEach(function(name){
+      result = result.concat(groups[name]);
+    });
+    return result;
+  }
+
   function renderCalendar(){
     document.getElementById('cal-nav-title').textContent = MONTH_LABEL(state.currentMonth);
 
@@ -976,7 +1022,7 @@
 
   function renderDayPanel(){
     document.getElementById('day-panel-date').textContent = formatPanelDate(state.selectedDate);
-    var dayEntries = entriesByDate(state.selectedDate);
+    var dayEntries = groupByRecommenderKeepingOrder(entriesByDate(state.selectedDate));
     document.getElementById('day-panel-count').textContent = dayEntries.length > 0 ? dayEntries.length+'곡' : '';
 
     var body = document.getElementById('day-panel-body');
@@ -1048,20 +1094,43 @@
       searchLabel.textContent = '곡 검색 (제목 또는 아티스트)';
       wrap.appendChild(searchLabel);
 
+      var searchInputWrap = document.createElement('div');
+      searchInputWrap.className = 'search-input-wrap';
+      wrap.appendChild(searchInputWrap);
+
       var input = document.createElement('input');
       input.type = 'text';
       input.id = 'song-search-input';
       input.placeholder = '예: 아이유 밤편지';
       input.value = state.searchQuery;
-      wrap.appendChild(input);
+      searchInputWrap.appendChild(input);
+
+      var clearBtn = document.createElement('button');
+      clearBtn.type = 'button';
+      clearBtn.className = 'search-clear-btn';
+      clearBtn.setAttribute('aria-label', '검색어 지우기');
+      clearBtn.style.display = state.searchQuery ? 'flex' : 'none';
+      clearBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 2.5L11.5 11.5M11.5 2.5L2.5 11.5" stroke="#9A9DC4" stroke-width="1.5" stroke-linecap="round"/></svg>';
+      searchInputWrap.appendChild(clearBtn);
 
       var resultsBox = document.createElement('div');
       resultsBox.className = 'search-results';
       resultsBox.id = 'song-search-results';
       wrap.appendChild(resultsBox);
 
+      clearBtn.addEventListener('click', function(){
+        input.value = '';
+        state.searchQuery = '';
+        state.searchResults = [];
+        state.searchError = '';
+        clearBtn.style.display = 'none';
+        renderSearchResults();
+        input.focus();
+      });
+
       input.addEventListener('input', function(){
         state.searchQuery = input.value;
+        clearBtn.style.display = input.value ? 'flex' : 'none';
         if(searchDebounce) clearTimeout(searchDebounce);
         var q = input.value.trim();
         if(q.length < 2){
@@ -1125,7 +1194,8 @@
           title: state.selectedSong.title,
           artist: state.selectedSong.artist,
           artwork: state.selectedSong.artwork,
-          recommender: recommender
+          recommender: recommender,
+          createdAt: Date.now()
         };
         addEntryToFirestore(entry);
         state.selectedDate = entry.date;
