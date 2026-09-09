@@ -24,7 +24,7 @@
   *{box-sizing:border-box;}
 
   button{ touch-action:manipulation; }
-  .cal-cell, .reco-person-row{ touch-action:manipulation; }
+  .cal-cell, .reco-person-row, .gacha-listen-btn{ touch-action:manipulation; }
 
   html, body{ margin:0; padding:0; }
 
@@ -123,6 +123,11 @@
     font-family:inherit;
   }
   .menu-dropdown button:hover{ background:var(--surface-2); }
+  .menu-divider{
+    height:1px;
+    background:var(--line);
+    margin:5px 3px;
+  }
 
   /* ---------- Layout ---------- */
   .onochu-grid{
@@ -579,6 +584,89 @@
     padding:18px 14px;
   }
 
+  /* ---------- Gacha ---------- */
+  .gacha-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:16px;
+    padding:8px 0 4px;
+  }
+  .gacha-btn{
+    background:var(--accent);
+    color:#241A05;
+    border:none;
+    border-radius:100px;
+    padding:12px 30px;
+    font-size:15px;
+    font-weight:800;
+    font-family:inherit;
+    cursor:pointer;
+  }
+  .gacha-btn:hover{ filter:brightness(1.05); }
+  .gacha-result-box{
+    width:100%;
+    display:flex;
+    justify-content:center;
+  }
+  .gacha-hint{
+    color:#C7C9E8;
+    font-size:13.5px;
+    text-align:center;
+    line-height:1.5;
+    padding:6px 10px;
+  }
+  .gacha-card{
+    background:var(--surface-2);
+    border-radius:14px;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    text-align:center;
+  }
+  .gacha-art{
+    width:120px;
+    height:120px;
+    border-radius:10px;
+    object-fit:contain;
+    background:var(--surface-2);
+  }
+  .gacha-title{
+    font-size:14.5px;
+    font-weight:700;
+    color:var(--text);
+    line-height:1.4;
+  }
+  .gacha-sub{
+    font-size:12.5px;
+    color:var(--mint);
+    font-weight:700;
+  }
+  .gacha-listen-btn{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    margin-top:4px;
+    background:var(--line);
+    color:var(--text);
+    border-radius:100px;
+    padding:8px 18px;
+    font-size:13px;
+    font-weight:700;
+    text-decoration:none;
+    cursor:pointer;
+  }
+  .gacha-listen-btn:hover{ filter:brightness(1.05); }
+  @keyframes gachaPop{
+    0%{ transform:scale(0.8) rotate(-2deg); opacity:0; }
+    60%{ transform:scale(1.05) rotate(1deg); opacity:1; }
+    100%{ transform:scale(1) rotate(0deg); opacity:1; }
+  }
+  .gacha-pop{ animation:gachaPop .4s ease; }
+
   /* ---------- Recommender picker ---------- */
   .recommender-picker{
     display:flex;
@@ -622,7 +710,10 @@
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 4H14M2 8H14M2 12H14" stroke="#F5F3ED" stroke-width="1.5" stroke-linecap="round"/></svg>
           </button>
           <div class="menu-dropdown" id="menu-dropdown" style="display:none;">
-            <button id="menu-item-reco">추천자별로 보기</button>
+            <button id="menu-item-reco">이름별로 보기</button>
+            <button id="menu-item-all">전체 곡 목록</button>
+            <div class="menu-divider"></div>
+            <button id="menu-item-gacha">오노추 랜덤 가챠</button>
           </div>
         </div>
       </div>
@@ -729,6 +820,7 @@
     addDate: fmtDate(new Date()),
     view: 'calendar',        // 'calendar' | 'reco-list' | 'reco-detail'
     selectedRecommender: null,
+    gachaResult: null,
     menuOpen: false,
     loaded: false
   };
@@ -819,6 +911,20 @@
     goToRecoList();
   });
 
+  document.getElementById('menu-item-all').addEventListener('click', function(e){
+    e.stopPropagation();
+    state.menuOpen = false;
+    menuDropdown.style.display = 'none';
+    goToAllList();
+  });
+
+  document.getElementById('menu-item-gacha').addEventListener('click', function(e){
+    e.stopPropagation();
+    state.menuOpen = false;
+    menuDropdown.style.display = 'none';
+    goToGacha();
+  });
+
   // ---------- view switching ----------
   function showCalendarView(){
     state.view = 'calendar';
@@ -828,6 +934,18 @@
   function goToRecoList(){
     state.view = 'reco-list';
     state.selectedRecommender = null;
+    document.getElementById('calendar-view').style.display = 'none';
+    document.getElementById('reco-view').style.display = 'block';
+    renderRecoView();
+  }
+  function goToAllList(){
+    state.view = 'all-list';
+    document.getElementById('calendar-view').style.display = 'none';
+    document.getElementById('reco-view').style.display = 'block';
+    renderRecoView();
+  }
+  function goToGacha(){
+    state.view = 'gacha';
     document.getElementById('calendar-view').style.display = 'none';
     document.getElementById('reco-view').style.display = 'block';
     renderRecoView();
@@ -852,7 +970,7 @@
     body.innerHTML = '';
 
     if(state.view === 'reco-list'){
-      title.textContent = '추천자별로 보기';
+      title.textContent = '이름별로 보기';
       var names = {};
       state.entries.forEach(function(e){
         names[e.recommender] = (names[e.recommender] || 0) + 1;
@@ -912,7 +1030,96 @@
           });
         });
       });
+    } else if(state.view === 'all-list'){
+      title.textContent = '전체 곡 목록';
+      var allSorted = state.entries.slice().sort(function(a, b){
+        var at = a.createdAt || 0, bt = b.createdAt || 0;
+        if(at !== bt) return bt - at;
+        return a.date < b.date ? 1 : -1;
+      });
+
+      if(allSorted.length === 0){
+        var emptyAll = document.createElement('div');
+        emptyAll.className = 'reco-empty';
+        emptyAll.textContent = '아직 추천된 곡이 없어요.';
+        body.appendChild(emptyAll);
+        return;
+      }
+
+      var allListEl = document.createElement('div');
+      allListEl.className = 'song-list';
+      allSorted.forEach(function(e){
+        var row = document.createElement('div');
+        row.className = 'song-row';
+        row.innerHTML =
+          '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
+          '<div class="song-meta">' +
+            '<div class="song-toplabel label-reco">'+escapeHtml(e.recommender)+' 추천 · '+shortDateLabel(e.date)+'</div>' +
+            '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+          '</div>' +
+          '<button class="song-del" title="삭제" data-id="'+e.id+'">&times;</button>';
+        allListEl.appendChild(row);
+      });
+      body.appendChild(allListEl);
+
+      allListEl.querySelectorAll('.song-del').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          showConfirm('이 추천곡을 삭제할까요?', function(){
+            deleteEntryFromFirestore(btn.getAttribute('data-id'));
+          });
+        });
+      });
+    } else if(state.view === 'gacha'){
+      title.textContent = '오노추 랜덤 가챠';
+
+      var gachaWrap = document.createElement('div');
+      gachaWrap.className = 'gacha-wrap';
+
+      var gachaBtn = document.createElement('button');
+      gachaBtn.type = 'button';
+      gachaBtn.className = 'gacha-btn';
+      gachaBtn.textContent = '뽑기 🎰';
+      gachaWrap.appendChild(gachaBtn);
+
+      var resultBox = document.createElement('div');
+      resultBox.className = 'gacha-result-box';
+      gachaWrap.appendChild(resultBox);
+
+      if(state.gachaResult){
+        renderGachaResult(resultBox, state.gachaResult, false);
+      } else {
+        var gachaHint = document.createElement('div');
+        gachaHint.className = 'gacha-hint';
+        gachaHint.textContent = '버튼을 눌러 오늘의 랜덤 추천곡을 뽑아보세요!';
+        resultBox.appendChild(gachaHint);
+      }
+
+      gachaBtn.addEventListener('click', function(){
+        if(state.entries.length === 0){
+          resultBox.innerHTML = '';
+          var gachaEmpty = document.createElement('div');
+          gachaEmpty.className = 'reco-empty';
+          gachaEmpty.textContent = '아직 추천된 곡이 없어요.';
+          resultBox.appendChild(gachaEmpty);
+          return;
+        }
+        var pick = state.entries[Math.floor(Math.random() * state.entries.length)];
+        state.gachaResult = pick;
+        renderGachaResult(resultBox, pick, true);
+      });
+
+      body.appendChild(gachaWrap);
     }
+  }
+
+  function renderGachaResult(container, e, animate){
+    container.innerHTML =
+      '<div class="gacha-card' + (animate ? ' gacha-pop' : '') + '">' +
+        '<img class="gacha-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
+        '<div class="gacha-title">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+        '<div class="gacha-sub">'+escapeHtml(e.recommender)+' 추천 · '+shortDateLabel(e.date)+'</div>' +
+        (e.youtubeUrl ? '<a class="gacha-listen-btn" href="'+escapeHtml(e.youtubeUrl)+'" target="_blank" rel="noopener noreferrer">들으러 가기 ▶</a>' : '') +
+      '</div>';
   }
 
   // ---------- calendar rendering ----------
@@ -1198,6 +1405,7 @@
           artist: state.selectedSong.artist,
           artwork: state.selectedSong.artwork,
           recommender: recommender,
+          youtubeUrl: state.selectedSong.youtubeUrl || '',
           createdAt: Date.now()
         };
         addEntryToFirestore(entry);
@@ -1306,10 +1514,12 @@
       var results = (data.items || []).map(function(item){
         var thumbs = (item.snippet && item.snippet.thumbnails) || {};
         var thumb = thumbs.high || thumbs.medium || thumbs.default || {};
+        var videoId = (item.id && item.id.videoId) || '';
         return {
           title: (item.snippet && item.snippet.title) || '',
           artist: (item.snippet && item.snippet.channelTitle) || '',
-          artwork: thumb.url || ''
+          artwork: thumb.url || '',
+          youtubeUrl: videoId ? ('https://www.youtube.com/watch?v=' + videoId) : ''
         };
       });
       state.searchResults = results;
