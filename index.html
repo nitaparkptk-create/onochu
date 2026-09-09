@@ -24,7 +24,7 @@
   *{box-sizing:border-box;}
 
   button{ touch-action:manipulation; }
-  .cal-cell, .reco-person-row, .gacha-listen-btn{ touch-action:manipulation; }
+  .cal-cell, .reco-person-row, .gacha-listen-btn, .song-link.has-link{ touch-action:manipulation; }
 
   html, body{ margin:0; padding:0; }
 
@@ -57,6 +57,8 @@
     display:flex;
     align-items:center;
     gap:10px;
+    cursor:pointer;
+    touch-action:manipulation;
   }
   .onochu-logo-emoji{
     font-size:28px;
@@ -285,6 +287,16 @@
     padding:8px;
     position:relative;
   }
+  .song-link{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    flex:1;
+    min-width:0;
+    border-radius:6px;
+  }
+  .song-link.has-link{ cursor:pointer; }
+  .song-link.has-link:hover{ opacity:0.85; }
   .song-art{
     width:46px;
     height:46px;
@@ -698,7 +710,7 @@
   <div class="onochu-wrap">
     <div class="onochu-header">
       <div>
-        <div class="onochu-title-row">
+        <div class="onochu-title-row" id="onochu-home-btn" role="button" aria-label="홈으로">
           <span class="onochu-logo-emoji" aria-hidden="true">🎧</span>
           <span class="onochu-title">오노추</span>
         </div>
@@ -1013,12 +1025,19 @@
         var row = document.createElement('div');
         row.className = 'song-row';
         row.innerHTML =
-          '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
-          '<div class="song-meta">' +
-            '<div class="song-toplabel label-date">'+shortDateLabel(e.date)+'</div>' +
-            '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+          '<div class="song-link' + (e.youtubeUrl ? ' has-link' : '') + '">' +
+            '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
+            '<div class="song-meta">' +
+              '<div class="song-toplabel label-date">'+shortDateLabel(e.date)+'</div>' +
+              '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+            '</div>' +
           '</div>' +
           '<button class="song-del" title="삭제" data-id="'+e.id+'">&times;</button>';
+        if(e.youtubeUrl){
+          row.querySelector('.song-link').addEventListener('click', function(){
+            window.open(e.youtubeUrl, '_blank', 'noopener,noreferrer');
+          });
+        }
         listEl.appendChild(row);
       });
       body.appendChild(listEl);
@@ -1052,12 +1071,19 @@
         var row = document.createElement('div');
         row.className = 'song-row';
         row.innerHTML =
-          '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
-          '<div class="song-meta">' +
-            '<div class="song-toplabel label-reco">'+escapeHtml(e.recommender)+' 추천 · '+shortDateLabel(e.date)+'</div>' +
-            '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+          '<div class="song-link' + (e.youtubeUrl ? ' has-link' : '') + '">' +
+            '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
+            '<div class="song-meta">' +
+              '<div class="song-toplabel label-reco">'+escapeHtml(e.recommender)+' 추천 · '+shortDateLabel(e.date)+'</div>' +
+              '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+            '</div>' +
           '</div>' +
           '<button class="song-del" title="삭제" data-id="'+e.id+'">&times;</button>';
+        if(e.youtubeUrl){
+          row.querySelector('.song-link').addEventListener('click', function(){
+            window.open(e.youtubeUrl, '_blank', 'noopener,noreferrer');
+          });
+        }
         allListEl.appendChild(row);
       });
       body.appendChild(allListEl);
@@ -1245,12 +1271,19 @@
         var row = document.createElement('div');
         row.className = 'song-row';
         row.innerHTML =
-          '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
-          '<div class="song-meta">' +
-            '<div class="song-toplabel label-reco">'+escapeHtml(e.recommender)+' 추천</div>' +
-            '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+          '<div class="song-link' + (e.youtubeUrl ? ' has-link' : '') + '">' +
+            '<img class="song-art" src="'+escapeHtml(e.artwork||'')+'" alt="" />' +
+            '<div class="song-meta">' +
+              '<div class="song-toplabel label-reco">'+escapeHtml(e.recommender)+' 추천</div>' +
+              '<div class="song-line">\''+escapeHtml(e.artist)+' - '+escapeHtml(e.title)+'\'</div>' +
+            '</div>' +
           '</div>' +
           '<button class="song-del" title="삭제" data-id="'+e.id+'">&times;</button>';
+        if(e.youtubeUrl){
+          row.querySelector('.song-link').addEventListener('click', function(){
+            window.open(e.youtubeUrl, '_blank', 'noopener,noreferrer');
+          });
+        }
         list.appendChild(row);
       });
       body.appendChild(list);
@@ -1541,6 +1574,17 @@
     renderCalendar();
   });
   document.getElementById('cal-today-btn').addEventListener('click', function(){
+    var now = new Date();
+    state.currentMonth = startOfMonth(now);
+    state.selectedDate = fmtDate(now);
+    state.showAddForm = false;
+    resetAddForm();
+    renderCalendar();
+    renderDayPanel();
+  });
+
+  document.getElementById('onochu-home-btn').addEventListener('click', function(){
+    showCalendarView();
     var now = new Date();
     state.currentMonth = startOfMonth(now);
     state.selectedDate = fmtDate(now);
