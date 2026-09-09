@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>오노추 - 오늘의 노래 추천</title>
+<title>저희의 사랑이잖아요 오노추는</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Nanum+Gothic:wght@400;700;800&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap');
 
@@ -224,6 +224,8 @@
     display:flex;
     flex-direction:column;
     justify-content:space-between;
+    min-width:0;
+    overflow:hidden;
     transition:border-color .15s ease, background .15s ease;
   }
   .cal-cell:hover{ background:var(--surface-2); }
@@ -257,25 +259,7 @@
     font-weight:700;
   }
 
-  .cal-thumbs{
-    display:flex;
-    align-items:center;
-  }
-  .cal-thumb{
-    width:20px;
-    height:20px;
-    border-radius:50%;
-    object-fit:contain;
-    border:1.5px solid var(--surface);
-    margin-left:-7px;
-    background:#ffffff;
-  }
-  .cal-thumb:first-child{ margin-left:0; }
-  .cal-more{
-    font-size:10px;
-    color:var(--text-dim);
-    margin-left:4px;
-  }
+
 
   /* ---------- Day panel ---------- */
   .day-panel-head{
@@ -1048,26 +1032,6 @@
       el.appendChild(dateRow);
 
       if(!cell.pad){
-        if(dayEntries.length > 0){
-          var thumbs = document.createElement('div');
-          thumbs.className = 'cal-thumbs';
-          var shown = dayEntries.slice(0,3);
-          shown.forEach(function(e){
-            var img = document.createElement('img');
-            img.className = 'cal-thumb';
-            img.src = e.artwork || '';
-            img.alt = '';
-            thumbs.appendChild(img);
-          });
-          if(dayEntries.length > 3){
-            var more = document.createElement('span');
-            more.className = 'cal-more';
-            more.textContent = '+'+(dayEntries.length-3);
-            thumbs.appendChild(more);
-          }
-          el.appendChild(thumbs);
-        }
-
         el.addEventListener('click', function(dateStr){
           return function(){
             state.selectedDate = dateStr;
